@@ -11,7 +11,7 @@ import telebot
 import time
 import os
 
-TOKEN = 'YOUR_TOKEN'
+TOKEN = 'LOCKED'
 bot = telebot.TeleBot(TOKEN)
 wikipedia.set_lang('ru')  # по умолчанию
 
