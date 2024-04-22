@@ -11,7 +11,7 @@
    4.1  Поиск изображений по запросу. / Search for images on request.
    4.2. Перевод статей на другие языки. / Translation of articles into other languages.
    4.3  Получение новостей и обновлений из Википедии. / Getting news and updates from Wikipedia.
-5. Для запуска бота небходимо перейти по ссылке в личные сообщения к боту / To launch the bot, you need to click on the link in the personal messages to the bot - https://t.me/wikiarticletg_bot .
+5. Для запуска бота небходимо перейти по ссылке в личные сообщения к боту / To launch the bot, you need to click on the link in the personal messages to the bot - https://t.me/wikiarticletg_bot . Нажать запустить или написать /start. / Click start or write /start.
 6. Продукт разрабатывается мной / The product is being developed by me - moond0wner . Я разработчик из России / I am a novice developer from Russia.
 7. Продукт разрабатывается из личного интереса разработчика (меня), так как это очень интересно, а также для получения опыта в Python и создании ботов. Продукт не подразумевает какую-либо финансовую поддержку (если только оплатить хостинг :D ), не имеет и не будеть иметь никаких платных услуг.
 / The product is being developed out of the personal interest of the developer (me), as it is very interesting, as well as to gain experience working in Python and creating bots. The product does not imply any financial support (unless you buy me hosting :D), does not provide and will not provide any paid services.
