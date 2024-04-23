@@ -11,7 +11,7 @@ import telebot
 import time
 import os
 
-TOKEN = 'LOCKED'
+TOKEN = 'your token'
 bot = telebot.TeleBot(TOKEN)
 wikipedia.set_lang('ru')  # по умолчанию
 
@@ -44,28 +44,58 @@ def handle_start(message):
 
 # Поиск статьи по теме
 @bot.message_handler(commands=['search'])
-def handle_search_start(message):
+def handle_search1(message):
     bot.send_message(message.chat.id, "Введите тему по которой тебе нужно найти статью.")
-    bot.register_next_step_handler(message, handle_search_cont)
+    bot.register_next_step_handler(message, handle_search2)
 
-def handle_search_cont(message):
+def handle_search2(message):
+    global search_results
     title = message.text
-    result = wikipedia.summary(title, range(4, 8))
-    get_url = wikipedia.page(message.text)
-    get_url = get_url.url
-    result += "\nСсылка на полную статью: \n" + get_url
-    bot.send_message(message.chat.id, result)
-    if os.path.exists(filename) and os.stat(filename).st_size > 0:
-        write_mode = 'a'
-    else:
-        write_mode = 'w'
+    try:
+        search_results = wikipedia.search(title, results=5)
+        show_result = ''
+        bot.send_message(message.chat.id, "Найдены следующие статьи:\n")
+        for i, article_title in enumerate(search_results, 1):
+            show_result += f'\n{i}. {article_title}'
+        bot.send_message(message.chat.id, show_result)
+        bot.send_message(message.chat.id, "Выберите нужную вам статью")
 
-    with open(filename, write_mode) as file:
-        if write_mode == 'w':
-            file.write(title + ': ' + get_url)
-        else:
-            file.write('\n' + title + ': ' + get_url)
-    bot.send_message(message.chat.id, "Статья сохранена. \nДля просмотра истории статей напишите /history_articles", reply_markup=keyboard1)
+        def get_article(message):
+            index = int(message.text) - 1
+            result = wikipedia.summary(search_results[index])
+            get_url = wikipedia.page(search_results[index])
+            get_url = get_url.url
+            result += "\nСсылка на полную статью: \n" + get_url
+            bot.send_message(message.chat.id, result)
+
+            if os.path.exists(filename) and os.stat(filename).st_size > 0:
+                write_mode = 'a'
+            else:
+                write_mode = 'w'
+
+            with open(filename, write_mode) as file:
+                if write_mode == 'w':
+                    file.write(search_results[index] + ': ' + get_url)
+                else:
+                    file.write('\n' + search_results[index] + ': ' + get_url)
+            bot.send_message(message.chat.id,
+                             "Статья сохранена", reply_markup=keyboard1)
+
+        bot.register_next_step_handler(message, get_article)
+
+    except wikipedia.exceptions.PageError as e:
+        bot.send_message(message.chat.id, "Обработана ошибка неоднозначности!")
+        bot.send_message(message.chat.id, f"Найдено несколько значений для темы {title}:\n")
+        show_result = ''
+        for i, res in enumerate(search_results, 1):
+            show_result += f'{i}. {res}'
+        bot.send_message(message.chat.id, show_result + '\nПожалуйста уточните в следующий раз тему.')
+        time.sleep(2)
+        handle_search1(message)
+
+    except wikipedia.exceptions.PageError:
+        # Обработка ошибки, когда статья не найдена
+       bot.send_message(message.chat.id, f"Статья по теме '{title}' не найдена.")
 
 
 @bot.message_handler(commands=['choose_lang'])
