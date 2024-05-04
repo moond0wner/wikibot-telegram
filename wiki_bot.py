@@ -12,7 +12,7 @@ import time
 import os
 from PIL import Image
 
-TOKEN = '7087950499:AAEdEchXrkiZ9fKo90vFzvIAXaTeq86f0CY'
+TOKEN = 'YOUR_TOKEN'
 bot = telebot.TeleBot(TOKEN)
 wikipedia.set_lang('ru')  # по умолчанию
 
