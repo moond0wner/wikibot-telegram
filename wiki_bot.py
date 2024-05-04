@@ -1,17 +1,18 @@
 """Бот на Python, который помогает находить информацию из Википедии прямо в телеграм. Version (1.0)
 Основной функционал готов, планируется добавить дополнительный функционал:
 1. Поиск изображений по запросу.
-2. Перевод статей на другие языки.
-3. Получение новостей и обновлений из Википедии.
+2. Получение новостей и обновлений из Википедии.
+3. Возможность поменять язык интерфейса. (Английский и немецкий)
 """
 
-
 import wikipedia
+import requests
 import telebot
 import time
 import os
+from PIL import Image
 
-TOKEN = 'your token'
+TOKEN = '7087950499:AAEdEchXrkiZ9fKo90vFzvIAXaTeq86f0CY'
 bot = telebot.TeleBot(TOKEN)
 wikipedia.set_lang('ru')  # по умолчанию
 
@@ -28,6 +29,10 @@ keyboard2.row("Найти ещё одну случайную статью", "Н�
 # Удаление клавиатуры
 keyboard3 = telebot.types.ReplyKeyboardRemove()
 
+# Кнопки для /search_image
+keyboard4 = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+keyboard4.row("Попробовать еще раз", "Вернуться к начачу")
+
 # Старт, список команд
 @bot.message_handler(commands=['start'])
 def handle_start(message):
@@ -37,6 +42,7 @@ def handle_start(message):
                                       " человеке, месте и т.д. из Википедии."
                                       "\nСписок команд бота:\n/start - запустить бота."
                                       "\n/search - найти статью по вашей теме."
+                                      "\n/search_image - найти картинку по вашей теме. (хуйня не работает)"
                                       "\n/choose_lang - выбрать язык на котором будет написана статья (по умолчанию русский). "
                                       "\n/history_articles - просмотреть историю запрашиваемых вами статей."
                                       "\n/random_article - получить случайную статью. "
@@ -78,8 +84,7 @@ def handle_search2(message):
                     file.write(search_results[index] + ': ' + get_url)
                 else:
                     file.write('\n' + search_results[index] + ': ' + get_url)
-            bot.send_message(message.chat.id,
-                             "Статья сохранена", reply_markup=keyboard1)
+            bot.send_message(message.chat.id,"Статья сохранена", reply_markup=keyboard1)
 
         bot.register_next_step_handler(message, get_article)
 
@@ -95,8 +100,48 @@ def handle_search2(message):
 
     except wikipedia.exceptions.PageError:
         # Обработка ошибки, когда статья не найдена
-       bot.send_message(message.chat.id, f"Статья по теме '{title}' не найдена.")
+        bot.send_message(message.chat.id, f"Статья по теме '{title}' не найдена.")
 
+
+
+
+@bot.message_handler(commands=['search_image']) # РАБОТАЕТ НИХУЯ
+def handle_search_image(message):
+    bot.send_message(message.chat.id, "Введите тему по которой тебе нужно найти картинку.")
+
+    def get_image(message):
+        """
+           Принимает тему от пользователя, находит соответствующую статью в Wikipedia
+           и отправляет ссылку на первую найденную в ней картинку.
+           """
+        try:
+            # Получаем страницу Wikipedia по заданной теме
+            topic = message.text
+            page = wikipedia.page(topic)
+            image_url = page.images[0]
+
+            # Загружаем изображение с URL-адреса
+            response = requests.get(image_url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0'})
+
+            # Проверяем, что изображение загрузилось успешно
+            if response.status_code == 200:
+                # Сохраняем изображение на диск
+                filename = f"{topic.replace(' ', '_')}.png"
+                with open(filename, "wb") as f:
+                    f.write(response.content)
+
+                # Отправляем изображение в Telegram-бот
+                with open(filename, "rb") as f:
+                    bot.send_photo(message.chat.id, f)
+            else:
+                bot.send_message(message.chat.id, "Ошибка при загрузке изображения.")
+        except Exception as e:
+            bot.send_message(message.chat.id, f"Произошла ошибка: {e}")
+        finally:
+            # Удаляем временный файл
+            os.remove(filename)
+
+    bot.register_next_step_handler(message, get_image)
 
 @bot.message_handler(commands=['choose_lang'])
 def handle_choose_language(message):
@@ -123,7 +168,7 @@ def handle_history_articles(message):
                     article_list += f'{i}. {article}'
                 bot.send_message(message.chat.id, f'Предоставляю список статей, которые вы запрашивали: \n{article_list}')
             else:
-                bot.send_message(message.chat.id, 'Ваш список cтат пока пуст!')
+                bot.send_message(message.chat.id, 'Ваш список cтатей пока пуст!')
     except FileNotFoundError:
         bot.send_message(message.chat.id, 'Ваш список статей пока пуст.')
 
@@ -131,35 +176,38 @@ def handle_history_articles(message):
 
 @bot.message_handler(commands=['random_article'])
 def handle_random_article(message):
-    bot.send_message(message.chat.id, "Я отыщу для вас статью наугад.")
+    try:
+        bot.send_message(message.chat.id, "Я отыщу для вас статью наугад.")
 
-    time.sleep(3)
+        time.sleep(3)
 
-    # Получить случайный заголовок статьи
-    random_article = wikipedia.random()
+        # Получить случайный заголовок статьи
+        random_article = wikipedia.random()
 
-    # Получить содержимое случайной статьи
-    page = wikipedia.page(random_article)
+        # Получить содержимое случайной статьи
+        page = wikipedia.page(random_article)
 
-    title = page.title
-    get_url = page.url
-    result = page.summary
+        title = page.title
+        get_url = page.url
+        result = page.summary
 
-    bot.send_message(message.chat.id, result + '\nСсылка на полную статью: ' + get_url)
+        bot.send_message(message.chat.id, result + '\nСсылка на полную статью: ' + get_url)
 
-    if os.path.exists(filename) and os.stat(filename).st_size > 0:
-        write_mode = 'a'
-    else:
-        write_mode = 'w'
-
-    with open(filename, write_mode) as file:
-        if write_mode == 'w':
-            file.write(title + ': ' + get_url)
+        if os.path.exists(filename) and os.stat(filename).st_size > 0:
+            write_mode = 'a'
         else:
-            file.write('\n' + title + ': ' + get_url)
+            write_mode = 'w'
 
-    time.sleep(2)
-    bot.send_message(message.chat.id, "Статья сохранена. \nДля просмотра истории статей напишите /history_articles", reply_markup=keyboard2)
+        with open(filename, write_mode) as file:
+            if write_mode == 'w':
+                file.write(title + ': ' + get_url)
+            else:
+                file.write('\n' + title + ': ' + get_url)
+
+        time.sleep(2)
+        bot.send_message(message.chat.id, "Статья сохранена. \nДля просмотра истории статей напишите /history_articles", reply_markup=keyboard2)
+    except Exception as e:
+        bot.send_message(message.chat.id, f'Обработана ошибка: {e}. \nПопробуйте еще раз.', reply_markup=keyboard2)
 
 
 @bot.message_handler(commands=['clear_history'])
@@ -176,15 +224,20 @@ def handle_clear_history_articles(message):
 @bot.message_handler(content_types=['text'])
 def handler(message):
     if message.text == "Найти ещё одну статью":
-        handle_search_start(message)
+        time.sleep(5)
+        handle_search1(message)
     elif message.text == "Найти ещё одну случайную статью":
+        time.sleep(5)
         handle_random_article(message)
     elif message.text == "Найти случайную статью":
         handle_random_article(message)
     elif message.text == "Найти статью по теме":
-        handle_search_start(message)
+        handle_search1(message)
     elif message.text == "Просмотреть историю статей":
         handle_history_articles(message)
+    elif message.text == "Попробовать еще раз":
+        time.sleep(5)
+        handle_search_image(message)
     elif message.text == "Вернуться к началу":
         bot.send_message(message.chat.id, "Возвращаемся к начальному меню...", reply_markup=keyboard3)
         time.sleep(3)
