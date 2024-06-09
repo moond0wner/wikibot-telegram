@@ -105,7 +105,7 @@ def handle_search2(message):
 
 
 
-@bot.message_handler(commands=['search_image']) # РАБОТАЕТ НИХУЯ
+@bot.message_handler(commands=['search_image']) # НЕ РАБОТАЕТ НИХУЯ
 def handle_search_image(message):
     bot.send_message(message.chat.id, "Введите тему по которой тебе нужно найти картинку.")
 
