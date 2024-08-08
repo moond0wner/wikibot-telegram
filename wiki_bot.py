@@ -128,6 +128,8 @@ def handle_search2(message):
     except wikipedia.exceptions.PageError:
         # Обработка ошибки, когда статья не найдена
         bot.send_message(message.chat.id, f"Статья по теме '{title}' не найдена.")
+    except Exception as e:
+        bot.send_message(message.chat.id, e)
 
 
 
