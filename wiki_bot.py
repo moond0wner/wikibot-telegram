@@ -133,8 +133,8 @@ def handle_search2(message):
 
 
 
-
-@bot.message_handler(commands=['search_image']) # НЕ РАБОТАЕТ НИХУЯ
+# 08.08.24: Так как эта функция не работает, она не будет прикручена к новой базе данных.
+@bot.message_handler(commands=['search_image']) # (дату не помню) НЕ РАБОТАЕТ НИХУЯ
 def handle_search_image(message):
     bot.send_message(message.chat.id, "Введите тему по которой тебе нужно найти картинку.")
 
