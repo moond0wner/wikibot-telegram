@@ -14,7 +14,7 @@ from PIL import Image
 
 import sqlite3
 
-TOKEN = '7087950499:AAEdEchXrkiZ9fKo90vFzvIAXaTeq86f0CY'
+TOKEN = 'YOUR TOKEN'
 bot = telebot.TeleBot(TOKEN)
 wikipedia.set_lang('ru')  # по умолчанию
 
