@@ -1,4 +1,4 @@
-"""Бот на Python, который помогает находить информацию из Википедии прямо в телеграм. Version (1.0)
+"""Бот на Python, который помогает находить информацию из Википедии прямо в телеграм. Version (1.1)
 Основной функционал готов, планируется добавить дополнительный функционал:
 1. Поиск изображений по запросу.
 2. Получение новостей и обновлений из Википедии.
@@ -12,7 +12,9 @@ import time
 import os
 from PIL import Image
 
-TOKEN = 'YOUR_TOKEN'
+import sqlite3
+
+TOKEN = '7087950499:AAEdEchXrkiZ9fKo90vFzvIAXaTeq86f0CY'
 bot = telebot.TeleBot(TOKEN)
 wikipedia.set_lang('ru')  # по умолчанию
 
@@ -48,6 +50,21 @@ def handle_start(message):
                                       "\n/random_article - получить случайную статью. "
                                       "\n/clear_history - очистить историю статей.", reply_markup=keyboard3)
 
+    user = message.from_user.username
+
+    try:
+        conn = sqlite3.connect(f'history_from_{user}.db')
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE history
+                        (id INTEGER PRIMARY KEY,
+                        name TEXT,
+                        link TEXT);
+        ''')
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(e)
+
 # Поиск статьи по теме
 @bot.message_handler(commands=['search'])
 def handle_search1(message):
@@ -56,6 +73,7 @@ def handle_search1(message):
 
 def handle_search2(message):
     global search_results
+    user = message.from_user.username
     title = message.text
     try:
         search_results = wikipedia.search(title, results=5)
@@ -73,7 +91,7 @@ def handle_search2(message):
             get_url = get_url.url
             result += "\nСсылка на полную статью: \n" + get_url
             bot.send_message(message.chat.id, result)
-
+            lst = [(search_results[index], get_url)]
             if os.path.exists(filename) and os.stat(filename).st_size > 0:
                 write_mode = 'a'
             else:
@@ -84,7 +102,16 @@ def handle_search2(message):
                     file.write(search_results[index] + ': ' + get_url)
                 else:
                     file.write('\n' + search_results[index] + ': ' + get_url)
-            bot.send_message(message.chat.id,"Статья сохранена", reply_markup=keyboard1)
+            bot.send_message(message.chat.id, "Статья сохранена", reply_markup=keyboard1)
+
+            commit_db(lst)
+            lst.clear()
+
+        def commit_db(lst):
+            conn = sqlite3.connect(f'history_from_{user}.db')
+            cursor = conn.cursor()
+            cursor.executemany('INSERT INTO history (name, link) VALUES (?, ?)', lst)
+            conn.commit()
 
         bot.register_next_step_handler(message, get_article)
 
@@ -157,7 +184,8 @@ def handle_choose_language_cont(message):
     wikipedia.set_lang(language)
     bot.send_message(message.chat.id, f'Выбран язык: {lang_lst[language]}', reply_markup=keyboard1)
 
-@bot.message_handler(commands=['history_articles'])
+# Старая версия данных с использованием простого .txt
+@bot.message_handler(commands=['history_articles_old'])
 def handle_history_articles(message):
     try:
         with open ('articles.txt', 'r') as file:
@@ -173,9 +201,29 @@ def handle_history_articles(message):
         bot.send_message(message.chat.id, 'Ваш список статей пока пуст.')
 
 
+# новая версия с использованием sqlite
+@bot.message_handler(commands=['history_articles'])
+def handle_history_articles_beta(message):
+    # Подключение к базе данных
+    user = message.from_user.username
+    conn = sqlite3.connect(f'history_from_{user}.db')
+    c = conn.cursor()
+
+    # Проверка, пуста ли база данных
+    c.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table'")
+    count = c.fetchone()[0]
+    if count != 0:
+        c.execute(f"SELECT * FROM history")
+        rows = c.fetchall()
+        for row in rows:
+            bot.send_message(message.chat.id, f"{row[0]}. {row[1]} \nСсылка на полную статью: \n{row[2]}")
+
+    conn.close()
+
 
 @bot.message_handler(commands=['random_article'])
 def handle_random_article(message):
+    user = message.from_user.username
     try:
         bot.send_message(message.chat.id, "Я отыщу для вас статью наугад.")
 
@@ -190,19 +238,26 @@ def handle_random_article(message):
         title = page.title
         get_url = page.url
         result = page.summary
-
+        lst = [(title, get_url)]
         bot.send_message(message.chat.id, result + '\nСсылка на полную статью: ' + get_url)
 
-        if os.path.exists(filename) and os.stat(filename).st_size > 0:
-            write_mode = 'a'
-        else:
-            write_mode = 'w'
-
-        with open(filename, write_mode) as file:
-            if write_mode == 'w':
-                file.write(title + ': ' + get_url)
+        def commit_db(lst):
+            conn = sqlite3.connect(f'history_from_{user}.db')
+            cursor = conn.cursor()
+            cursor.executemany('INSERT INTO history (name, link) VALUES (?, ?)', lst)
+            conn.commit()
+            if os.path.exists(filename) and os.stat(filename).st_size > 0:
+                write_mode = 'a'
             else:
-                file.write('\n' + title + ': ' + get_url)
+                write_mode = 'w'
+
+            with open(filename, write_mode) as file:
+                if write_mode == 'w':
+                    file.write(title + ': ' + get_url)
+                else:
+                    file.write('\n' + title + ': ' + get_url)
+        commit_db(lst)
+        lst.clear()
 
         time.sleep(2)
         bot.send_message(message.chat.id, "Статья сохранена. \nДля просмотра истории статей напишите /history_articles", reply_markup=keyboard2)
@@ -212,11 +267,22 @@ def handle_random_article(message):
 
 @bot.message_handler(commands=['clear_history'])
 def handle_clear_history_articles(message):
+    user = message.from_user.username
     bot.send_message(message.chat.id, "Провожу проверку списка...")
     time.sleep(3)
-    if os.path.exists(filename) and os.stat(filename).st_size > 0:
+    # Подключение к базе данных
+    conn = sqlite3.connect(f'history_from_{user}.db')
+    c = conn.cursor()
+
+    # Проверка, пуста ли база данных
+    c.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table'")
+    count = c.fetchone()[0]
+    if os.path.exists(filename) and os.stat(filename).st_size > 0 and count >= 1:
         with open(filename, 'w') as file:
             file.write('')
+            c.execute("DELETE FROM history")
+            conn.commit()
+            conn.close()
         bot.send_message(message.chat.id, "Список очищен!")
     else:
         bot.send_message(message.chat.id, "Тут нечего чистить! Ваш список пуст.")
@@ -243,5 +309,5 @@ def handler(message):
         time.sleep(3)
         handle_start(message)
 
-
-bot.infinity_polling()
+if __name__ == '__main__':
+    bot.infinity_polling()
