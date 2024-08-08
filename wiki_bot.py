@@ -28,6 +28,10 @@ keyboard1.row("Найти ещё одну статью", "Найти случа�
 keyboard2 = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
 keyboard2.row("Найти ещё одну случайную статью", "Найти статью по теме", "Просмотреть историю статей", "Вернуться к началу")
 
+# Кнопка для /choose_lang
+keyboard5 = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+keyboard5.row("Найти случайную статью", "Найти статью по теме", "Просмотреть историю статей", "Вернуться к началу")
+
 # Удаление клавиатуры
 keyboard3 = telebot.types.ReplyKeyboardRemove()
 
@@ -184,7 +188,7 @@ def handle_choose_language_cont(message):
     lang_lst = {'ru': "Русский", 'en': "Английский", 'de': "Немецкий", 'fr': "Французский"}
     language = message.text
     wikipedia.set_lang(language)
-    bot.send_message(message.chat.id, f'Выбран язык: {lang_lst[language]}', reply_markup=keyboard1)
+    bot.send_message(message.chat.id, f'Выбран язык: {lang_lst[language]}', reply_markup=keyboard5)
 
 # Старая версия данных с использованием простого .txt
 @bot.message_handler(commands=['history_articles_old'])
